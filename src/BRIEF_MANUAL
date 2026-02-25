@@ -1,0 +1,157 @@
+# phi4_mmc — Minimal Manual
+
+-------------------------------------------------
+## Overview
+`phi4_mmc` is a modular Monte-Carlo code for the mean-field **φ⁴ lattice model** with two ensembles:
+
+- **micro**: microcanonical
+- **canon**: canonical (Metropolis at fixed inverse temperature `beta_mc`)
+
+A run is configured by:
+1. a Fortran **namelist input** file (e.g. `input.inp`)
+2. **mandatory CLI arguments** that set the sweep index and runtime lengths
+
+-------------------------------------------------
+
+## Build
+
+From the source directory:
+
+```bash
+make clean  # if available; otherwise: rm -rf build *.mod phi4_mmc
+make
+
+-------------------------------------------------
+
+## RUN (LOCAL)
+./phi4_mmc -i input.inp  n_samp  L  n_steps  n_jump  n_realiz  n_rest
+
+Meaning of CLI arguments:
+
+- n_samp : sampling index used internally to set run parameters (e.g. energy/β depending on setup)
+
+- L : system size parameter (used to define N in the model setup)
+
+- n_steps : total MC steps
+
+- n_jump : measure every n_jump steps
+
+- n_realiz : realization id (use different values for independent runs)
+
+- n_rest : restart segment index (1 = fresh run; >1 = continue from previous segment)
+
+-------------------------------------------------
+
+EXAMPLE:: ./phi4_mmc -i input.inp  2600  256  1000000  100  1  1
+
+
+-------------------------------------------------
+## Input file (input.inp)
+
+The input is a Fortran namelist. Typical blocks:
+
+&system
+
+cluster_time : walltime budget in seconds (used to trigger safe restart)
+
+&model
+
+coup, mu, lambda : model parameters
+
+ensemble : "micro" or "canon"
+
+&run
+
+n_steps, n_jump, n_therm, n_realiz, n_print
+
+&ioctl
+
+out_dir : directory for observable output (e.g. "out")
+
+restart_dir : directory for restart binaries (e.g. "out/restart")
+
+&rngctl
+
+seed : RNG seed
+
+Note: paths such as out_dir="out" are relative to the directory where the executable is launched.
+
+-------------------------------------------------
+## Output
+Observables (*.dat)
+
+Observable files are written into out_dir (default out/).
+The output is typically configured to keep only the latest snapshot (overwrite) rather than appending a full trajectory.
+
+Restart files (*.bin)
+
+Restart binaries are written into restart_dir (default out/restart/).
+When n_rest > 1, the code reads from the previous segment (n_rest-1) and resumes seamlessly, enforcing consistency checks (including ensemble).
+
+-------------------------------------------------
+
+## Code structure (modules)
+
+1) mod_kinds
+Numerical kinds/precision (e.g. dp).
+
+2) mod_types_phi4
+Central derived types:
+
+parameters (Phi4Params)
+
+state (Phi4State)
+
+observables (Phi4Obs)
+
+IO parameters (IOParams)
+
+RNG state (RNGState)
+
+3) mod_input_phi4
+Reads the namelist file and populates the parameter structures.
+
+4) mod_random
+RNG utilities and reproducible seeding/state.
+
+5) mod_phi4_model
+Hamiltonian/potential and fast local energy updates for the mean-field φ⁴ model.
+
+6) mod_phi4_init
+Initialization of state/observables consistent with the chosen ensemble.
+
+7) mod_metropolis_phi4
+Monte-Carlo kernels (proposal/acceptance) used by the chosen ensemble.
+
+8) mod_ensemble_dispatch
+Selects the correct MC update routine based on ensemble.
+
+9) mod_io_observables_phi4
+Accumulators and reduction/reinflate logic for measured observables.
+
+10) mod_io_append_dispatch
+Output writer dispatch: selects the proper observable writer for micro/canon and writes to out_dir.
+
+11) mod_io_restart_phi4
+Restart I/O (binary stream): write/read state, RNG, and running counters; enforces consistency checks.
+
+12) mod_cli_phi4
+Command-line parsing and user-facing terminal messages.
+
+13) main_phi4
+Orchestrates the workflow: parse CLI + input, initialize or restart, run the MC loop, periodic output, safe walltime handling, final restart.
+
+
+-------------------------------------------------
+
+## Running on MeluXina (Slurm)
+
+This repository includes Slurm helper scripts:
+
+launch_job_*.sh
+Submits batches/arrays of jobs via sbatch (typically splitting the workload across groups of realizations and/or parameter ranges).
+
+meluxina-run_*.sh
+Node-level runner executed by Slurm. It performs the n_samp sweep and runs multiple realizations in parallel using srun --exclusive, saturating the allocated node (e.g. 128 tasks × 1 core).
+
+Recommendation: launch jobs from a dedicated run directory and keep outputs separated via out_dir/restart_dir.
