@@ -3,9 +3,10 @@
 /
 
 &model
-  coup   = 1.0
-  mu     = 2.0
-  lambda = 0.6
+  auto_coup = .true.
+  coup   = 1.0      ! every values: if auto_coup=.true. then coup=(N-1)/(8N)
+  mu     = 1.0
+  lambda = 6.0
   ensemble = "micro"
 /
 

@@ -83,6 +83,18 @@ program main_phi4
   ! ---------------------------
   par%L       = L_cli
   par%N       = par%L
+
+  ! ---------------------------
+  ! Auto-normalize mean-field coupling using runtime N
+  ! Target: -(1/(4N)) (sum_i q_i)^2
+  ! In this code the MF piece is:  -(2*coup/(N-1)) (sum_i q_i)^2
+  ! => choose coup = (N-1)/(8N)
+  ! ---------------------------
+  if (par%auto_coup) then
+    if (par%N <= 1) stop "ERROR: auto_coup requires N>1"
+    par%coup = real(par%N - 1, dp) / (8.0_dp * real(par%N, dp))
+  end if
+
   par%n_steps = n_steps_cli
   par%n_jump  = n_jump_cli
   n_print     = par%n_print

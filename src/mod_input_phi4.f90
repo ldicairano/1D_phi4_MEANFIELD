@@ -30,6 +30,7 @@ contains
     real(dp) :: cluster_time
 
     real(dp) :: coup, mu, lambda
+    logical  :: auto_coup
     real(dp) :: beta_mc
     character(len=16) :: ensemble
 
@@ -41,15 +42,16 @@ contains
 
     ! --------- namelists (match input.inp groups) ----------
     namelist /system/ cluster_time
-    namelist /model/  coup, mu, lambda, ensemble, beta_mc
+    namelist /model/  coup, mu, lambda, auto_coup, ensemble, beta_mc
     namelist /run/    n_steps, n_jump, n_therm, n_realiz, n_print
-    namelist /ioctl/ out_dir, restart_dir
+    namelist /ioctl/  out_dir, restart_dir
     namelist /rngctl/ seed
 
     ! Defaults
     cluster_time = par%cluster_time
 
     coup = par%coup; mu = par%mu; lambda = par%lambda
+    auto_coup = par%auto_coup
     ensemble = par%ensemble
     beta_mc = par%beta_mc
 
@@ -87,6 +89,7 @@ contains
     par%coup = coup
     par%mu = mu
     par%lambda = lambda
+    par%auto_coup = auto_coup
 
     ! Compatibility:
     ! - input.inp currently uses "beta = ..."

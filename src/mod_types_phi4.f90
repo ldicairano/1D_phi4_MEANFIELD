@@ -23,9 +23,11 @@ module mod_types_phi4
 
     ! --- model params ---
     real(dp) :: coup   = 1.0_dp
-    real(dp) :: mu     = 2.0_dp
-    real(dp) :: lambda = 3.0_dp/5.0_dp
-
+    real(dp) :: mu     = 1.0_dp   ! 2.0_dp
+    real(dp) :: lambda = 6.0_dp   ! 3.0_dp/5.0_dp
+    ! If .true., compute coup(J) from N after CLI overrides (see main).
+    logical  :: auto_coup = .false.
+    
     ! --- ensemble ---
     character(len=16) :: ensemble = "micro"  ! "micro" or "canon"
     real(dp) :: beta_mc = 0.0_dp             ! canonical input inverse temperature
