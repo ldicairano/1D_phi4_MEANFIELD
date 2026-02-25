@@ -129,33 +129,43 @@ contains
       end if
     end do
   
-    if (obs%n_att > 0) obs%acc_rate = real(obs%n_acc,dp)/real(obs%n_att,dp)
+    obs%acc_rate = real(obs%n_acc,dp)/real(obs%n_att,dp)
   end subroutine mmc_sweep_canon
 
 
   subroutine mmc_sweep_micro(par, st, rng, obs)
+    use mod_kinds,      only: dp
+    use mod_random,     only: rng_uniform
+    use mod_phi4_model, only: deltaV_local_fast
+    implicit none
+  
     type(Phi4Params), intent(in)    :: par
     type(Phi4State),  intent(inout) :: st
     type(RNGState),   intent(inout) :: rng
     type(Phi4Obs),    intent(inout) :: obs
   
-    integer :: k, i, j, tmp
+    integer  :: k, i, j, tmp
     real(dp) :: phi_old, phi_new, dV, Vnew
-    real(dp) :: r, u
+    real(dp) :: rr, u, dW, expo
+  
+    ! ---- exponent (microcanonical configurational weight) ----
+    ! This corresponds to alpha = N_kin/2 - 1. If you use a different N_dof,
+    ! replace the next line accordingly.
+    expo = 0.5_dp*real(par%N,dp) - 1.0_dp
   
     ! ---------------------------
     ! Fisher–Yates shuffle (in-place)
     ! ---------------------------
     do k = par%N, 2, -1
-      u = rng_uniform(rng)                 ! u in [0,1)
-      j = 1 + int(u * real(k, dp))         ! j in [1,k]
+      rr = rng_uniform(rng)                 ! rr in [0,1)
+      j  = 1 + int(rr * real(k, dp))        ! j in [1,k]
       tmp = st%index(j)
       st%index(j) = st%index(k)
       st%index(k) = tmp
     end do
   
     ! ---------------------------
-    ! Microcanonical Metropolis in permuted order
+    ! Microcanonical MMC sweep (permuted order)
     ! ---------------------------
     do k = 1, par%N
       i = st%index(k)
@@ -163,24 +173,25 @@ contains
       phi_old = st%phi(i)
       phi_new = phi_old + par%delta*(2.0_dp*rng_uniform(rng) - 1.0_dp)
   
-      call deltaV_local_fast(par, st%S1, st%phi(i), phi_new, dV)
+      call deltaV_local_fast(par, st%S1, phi_old, phi_new, dV)
       Vnew = st%V + dV
   
       obs%n_att = obs%n_att + 1
   
-      r = micro_ratio(par, st%V, Vnew)
-  
-      ! Accept if r >= 1, otherwise accept with probability r
-      u = rng_uniform(rng)
-      if ( (r >= 1.0_dp) .or. (u < r) ) then
-        st%phi(i) = phi_new
-        st%V      = Vnew
-        call update_macros_accept(par, st, phi_old, phi_new)
-        obs%n_acc = obs%n_acc + 1
+      dW = log(par%Etot - Vnew) - log(par%Etot - st%V)
+      u  = rng_uniform(rng)
+
+      ! Hard constraint: Etot must exceed the new potential
+      if (par%Etot > Vnew .AND. u < exp(expo*dW)) then
+          st%phi(i) = phi_new
+          st%V      = Vnew
+          call update_macros_accept(par, st, phi_old, phi_new)
+          obs%n_acc = obs%n_acc + 1
       end if
+  
     end do
   
-    if (obs%n_att > 0) obs%acc_rate = real(obs%n_acc,dp)/real(obs%n_att,dp)
+    obs%acc_rate = real(obs%n_acc,dp)/real(obs%n_att,dp)
   
     ! Keep kinetic energy available in the state (micro: K = E - V)
     st%K = par%Etot - st%V
