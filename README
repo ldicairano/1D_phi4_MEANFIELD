@@ -1,0 +1,13 @@
+This repository includes two small Slurm helper scripts to run large parameter sweeps on MeluXina in a clean and reproducible way:
+
+1) meluxina-run_*.sh
+Slurm job script executed on the compute node.
+It loads the required module stack, reads run parameters from the command line (system size, number of steps, jump/measurement stride, restart index, realization index), then performs a sweep over a range of n_samp values. For each n_samp it launches multiple realizations in parallel (e.g. 4) using srun --exclusive with --ntasks/--cpus-per-task set so that each simulation gets its own core.
+The script uses a simple throttling pattern (e.g. 32 n_samp values × 4 realizations = 128 concurrent tasks) to fully saturate the allocated node while keeping Slurm step management stable. Outputs and logs are written per run.
+
+2) launch_job_*.sh
+Local launcher script (run on the login node).
+It submits a batch of Slurm jobs via sbatch, typically splitting the total workload across groups of realizations (e.g. starting realizations 1, 5, 9, …) and/or across different parameter ranges. This is the “driver” you run once to populate the Slurm queue with the desired sweep; each submitted job then executes meluxina-run_*.sh on the compute node.
+
+---------------------------------
+In short: launch_job_*.sh submits jobs, while meluxina-run_*.sh runs the actual simulations on the node and parallelizes the sweep efficiently (1 core per simulation) using Slurm tasking.
