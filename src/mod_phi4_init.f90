@@ -170,7 +170,7 @@ contains
     end do
 
     par%delta = delta_try
-    write(*,'(A,F10.4,A,F10.4)') " [MICRO INIT] tuned delta = ", par%delta, "  acc ~ ", acc
+    !write(*,'(A,F10.4,A,F10.4)') " [MICRO INIT] tuned delta = ", par%delta, "  acc ~ ", acc
 
     ! Warm-up
     p = par

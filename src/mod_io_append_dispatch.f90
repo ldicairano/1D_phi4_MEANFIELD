@@ -8,7 +8,8 @@ module mod_io_append_dispatch
 
   abstract interface
   subroutine append_iface(io, par, obs, time_tot, n_MC)
-    import :: IOParams, Phi4Params, Phi4Obs, dp
+    use mod_kinds,      only: dp
+    use mod_types_phi4, only: IOParams, Phi4Params, Phi4Obs
     type(IOParams),   intent(in) :: io
     type(Phi4Params), intent(in) :: par
     type(Phi4Obs),    intent(in) :: obs
@@ -48,6 +49,8 @@ end subroutine ensure_dir
 
 
   subroutine append_observables_micro(io, par, obs, time_tot, n_MC)
+    use mod_kinds,      only: dp
+    use mod_types_phi4, only: IOParams, Phi4Params, Phi4Obs
     type(IOParams),   intent(in) :: io
     type(Phi4Params), intent(in) :: par
     type(Phi4Obs),    intent(in) :: obs
@@ -102,7 +105,7 @@ end subroutine ensure_dir
 
   subroutine append_observables_canon(io, par, obs, time_tot, n_MC)
     use mod_kinds,      only: dp
-    use mod_types_phi4, only: Phi4Params, Phi4Obs
+    use mod_types_phi4, only: IOParams, Phi4Params, Phi4Obs
     implicit none
     type(IOParams),   intent(in) :: io
     type(Phi4Params), intent(in) :: par

@@ -7,7 +7,7 @@ program main_phi4
   use mod_phi4_init,          only: allocate_state, init_configuration
   use mod_metropolis_phi4,    only: sweep_iface
   use mod_ensemble_dispatch,  only: select_sweep
-  use mod_io_observables_phi4,only: reset_obs,update_iface, reinflate_iface, select_obs_ops
+  use mod_io_observables_phi4,only: reset_obs, update_iface, reinflate_iface, select_obs_ops
   use mod_io_append_dispatch, only: select_append, append_iface
   use mod_io_restart_phi4,    only: read_restart, write_restart
   implicit none
