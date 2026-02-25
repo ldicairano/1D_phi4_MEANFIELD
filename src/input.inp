@@ -1,0 +1,27 @@
+&system
+  cluster_time = 172800
+/
+
+&model
+  coup   = 1.0
+  mu     = 2.0
+  lambda = 0.6
+  ensemble = "micro"
+/
+
+&run
+  n_steps = 1000000
+  n_jump  = 100
+  n_therm = 10
+  n_realiz = 1
+  n_print  = 1000
+/
+
+&ioctl
+  out_dir = "out"
+  restart_dir = "out/restart"
+/
+
+&rngctl
+  seed = 12345
+/
