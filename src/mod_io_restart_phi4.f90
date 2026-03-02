@@ -4,7 +4,7 @@ module mod_io_restart_phi4
   implicit none
   private
   public :: read_restart, write_restart
-
+  public :: read_last_nmc_from_dat
   integer, parameter :: RESTART_VERSION = 20260225
 
 contains
@@ -188,5 +188,53 @@ end subroutine ensure_dir
     st%phi4 = st%S4 / real(par%N, dp)
 
   end subroutine read_restart
+
+subroutine read_last_nmc_from_dat(io, par, ir, nrest, nmc_last, found)
+  use mod_kinds,      only: dp
+  use mod_types_phi4, only: IOParams, Phi4Params
+  implicit none
+  type(IOParams),   intent(in)  :: io
+  type(Phi4Params), intent(in)  :: par
+  integer,          intent(in)  :: ir, nrest
+  integer,          intent(out) :: nmc_last
+  logical,          intent(out) :: found
+
+  character(len=512) :: fname, line
+  integer :: u, ios, ios2
+  real(dp) :: t_dummy
+  integer  :: nmc_tmp
+
+  found    = .false.
+  nmc_last = 0
+
+  ! Nome IDENTICO a quello usato in append (vedi mod_io_append_dispatch.f90)
+  if (trim(par%ensemble) == "micro") then
+    write(fname,'(A,"/obs_micro_",I0,"_",I0,"_",I0,"_",I0,".dat")') &
+      trim(io%out_dir), par%n_samp, ir, nrest, par%N
+  else if (trim(par%ensemble) == "canon") then
+    write(fname,'(A,"/obs_canon_",I0,"_",I0,"_",I0,"_",I0,".dat")') &
+      trim(io%out_dir), par%n_samp, ir, nrest, par%N
+  else
+    return
+  end if
+
+  open(newunit=u, file=trim(fname), status="old", action="read", iostat=ios)
+  if (ios /= 0) return
+
+  do
+    read(u,'(A)', iostat=ios) line
+    if (ios /= 0) exit
+    if (len_trim(line) == 0) cycle
+
+    ! Nel .dat la 2a colonna è SEMPRE n_MC (sia micro che canon)
+    read(line, *, iostat=ios2) t_dummy, nmc_tmp
+    if (ios2 == 0) then
+      nmc_last = nmc_tmp
+      found = .true.
+    end if
+  end do
+
+  close(u)
+end subroutine read_last_nmc_from_dat
 
 end module mod_io_restart_phi4

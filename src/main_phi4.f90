@@ -9,7 +9,7 @@ program main_phi4
   use mod_ensemble_dispatch,  only: select_sweep
   use mod_io_observables_phi4,only: reset_obs, update_iface, reinflate_iface, select_obs_ops
   use mod_io_append_dispatch, only: select_append, append_iface
-  use mod_io_restart_phi4,    only: read_restart, write_restart
+  use mod_io_restart_phi4,    only: read_restart, write_restart, read_last_nmc_from_dat
   implicit none
 
 !   ██╗██████╗      ███╗   ███╗███████╗    ██████╗██╗  ██╗██╗██╗  ██╗
@@ -109,7 +109,7 @@ program main_phi4
 
 
   if (trim(par%ensemble) == "micro") then
-    par%en_in = 0.01_dp * real(par%n_samp, dp)
+    par%en_in = 0.0001_dp * real(par%n_samp, dp)
     par%Etot  = real(par%N, dp) * par%en_in
   else if (trim(par%ensemble) == "canon") then
     par%beta_mc = 0.00001_dp * real(par%n_samp, dp)
@@ -142,29 +142,42 @@ program main_phi4
   ! ---------------------------
 
   ! initialize the observables
-    call reset_obs(obs)
-    n_MC = 0
+  call reset_obs(obs)
+  n_MC  = 0
+  step0 = 0
+
+  ! Set initial conditions or restart the trajectory
+  if (par%n_rest == 1) then
+    call init_configuration(par, st, rng)
+    n_MC  = 0
     step0 = 0
-    
-    ! Set initial conditions or restart the trajectory
-    if (par%n_rest == 1) then
-      call init_configuration(par, st, rng)
-      n_MC = 0
-    else
-      call read_restart(io, par, st, obs, rng, step0, par%n_realiz)   ! auto: reads only if n_rest>1
-      call reinflate(obs)  !
-      n_MC = obs%n_MC
+  else
+  block
+    integer :: nmc_dat
+    logical :: ok_dat
+
+    ! Read configuration + obs (in compressed form) + RNG from restart
+    call read_restart(io, par, st, obs, rng, step0, par%n_realiz)
+
+    ! If the .dat is an overwrite-checkpoint of the last state, it is the truth for progress.
+    call read_last_nmc_from_dat(io, par, par%n_realiz, par%n_rest-1, nmc_dat, ok_dat)
+    if (ok_dat) then
+      step0    = nmc_dat
+      obs%n_MC = nmc_dat
     end if
 
+    ! Reinflate accumulators coherently with the chosen obs%n_MC
+    call reinflate(obs)
 
-    ! Check if the total length has been already reached
-    if (par%n_rest > 1) then
-      if (step0 >= par%n_steps) then
-        call cli_msg_restart_already_complete(par, step0)
-        stop 0
-      end if
+    n_MC = obs%n_MC
+
+    ! If already complete, exit cleanly
+    if (n_MC >= par%n_steps) then
+      call cli_msg_restart_already_complete(par, n_MC)
+      stop 0
     end if
-
+  end block
+  end if
 
     call cpu_time(time_config_out)
     time_tot = time_config_out - time_config_in
