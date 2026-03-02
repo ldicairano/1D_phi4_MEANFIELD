@@ -207,7 +207,7 @@ subroutine read_last_nmc_from_dat(io, par, ir, nrest, nmc_last, found)
   found    = .false.
   nmc_last = 0
 
-  ! Nome IDENTICO a quello usato in append (vedi mod_io_append_dispatch.f90)
+  ! same name as in mod_io_append_dispatch.f90
   if (trim(par%ensemble) == "micro") then
     write(fname,'(A,"/obs_micro_",I0,"_",I0,"_",I0,"_",I0,".dat")') &
       trim(io%out_dir), par%n_samp, ir, nrest, par%N
@@ -226,7 +226,7 @@ subroutine read_last_nmc_from_dat(io, par, ir, nrest, nmc_last, found)
     if (ios /= 0) exit
     if (len_trim(line) == 0) cycle
 
-    ! Nel .dat la 2a colonna è SEMPRE n_MC (sia micro che canon)
+    ! in file .dat, second column is always n_MC
     read(line, *, iostat=ios2) t_dummy, nmc_tmp
     if (ios2 == 0) then
       nmc_last = nmc_tmp
